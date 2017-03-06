@@ -1,0 +1,111 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package mongodb_json;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
+import com.mongodb.util.JSON;
+import java.net.UnknownHostException;
+
+/**
+ *
+ * @author User
+ */
+public class MongoDb_json {
+
+    /**
+     * @param args the command line arguments
+     * @throws java.net.UnknownHostException
+     */
+    public static void main(String[] args) throws UnknownHostException {
+        // TODO code application logic here
+
+        //Connectez au serveur MongoDB, avec un hôte et un port spécifiés.
+        MongoClient mongo = new MongoClient("localhost", 27017);
+
+        //Obtenir la base de données. Si la base de données n'existe pas, MongoDB la créera pour vous.
+        DB db = mongo.getDB("db_with_json");
+
+        //insert into table ------------------------------------------------------------
+        String json_a = "{'_id':1, 'hosting' : 'hostA' , 'type' : 'vps' , 'clients' : 1000}";
+        String json_b = "{'_id':2, 'hosting' : 'hostB' , 'type' : 'dedicated server' , 'clients' : 100}";
+        String json_c = "{ 'hosting' : 'hostC' , 'type' : 'vps' , 'clients' : 900}";
+
+        DBObject dbObject_a = (DBObject) JSON.parse(json_a);
+        DBObject dbObject_b = (DBObject) JSON.parse(json_b);
+        DBObject dbObject_c = (DBObject) JSON.parse(json_c);
+        DBCollection table = db.getCollection("users");
+
+        table.insert(dbObject_a);
+        table.insert(dbObject_b);
+        table.insert(dbObject_c);
+
+        System.out.println("---------- Voila les donnees inseret dans la table ----------");
+        DBCursor curseur_insert = table.find();
+        while (curseur_insert.hasNext()) {
+            System.out.println(curseur_insert.next());
+        }
+
+        //update  table with set (set the value) ------------------------------------------------------------
+        System.out.println("\n\n---------- Update avec la valeur de set ----------");
+        BasicDBObject searchQuery_set = new BasicDBObject().append("type", "dedicated server");
+        BasicDBObject newDocument_set = new BasicDBObject().append("$set", new BasicDBObject().append("type", "dedicated"));
+        table.update(searchQuery_set, newDocument_set);
+
+        DBCursor curseur_update_set = table.find();
+        while (curseur_update_set.hasNext()) {
+            System.out.println(curseur_update_set.next());
+        }
+
+        //update  table with inc (increase the value) ------------------------------------------------------------
+        //search where hosting = hostB and increese clients by 99 (100+99) = 199
+        System.out.println("\n\n---------- Update avec la valeur de inc ----------");
+        BasicDBObject newDocument = new BasicDBObject().append("$inc", new BasicDBObject().append("clients", 99));
+        table.update(new BasicDBObject().append("hosting", "hostB"), newDocument);
+
+        DBCursor curseur_update_inc = table.find();
+        while (curseur_update_inc.hasNext()) {
+            System.out.println(curseur_update_inc.next());
+        }
+
+        //update  table with multi  ------------------------------------------------------------
+        System.out.println("\n\n---------- Update avec la valeur de multi ----------");
+        BasicDBObject updateQuery = new BasicDBObject();
+        updateQuery.append("$set", new BasicDBObject().append("clients", "999"));
+        BasicDBObject searchQuery = new BasicDBObject();
+        searchQuery.append("type", "vps");
+        // if update it update first one he sees and stop
+        table.updateMulti(searchQuery, updateQuery);
+
+        DBCursor curseur_update_multi = table.find();
+        while (curseur_update_multi.hasNext()) {
+            System.out.println(curseur_update_multi.next());
+        }
+
+        //read from table where clients = 999;
+        System.out.println("\n\n---------- read where client equale 999 ----------");
+        DBCursor curseur_read = table.find(new BasicDBObject().append("clients", "999"));
+        while (curseur_read.hasNext()) {
+            System.out.println(curseur_read.next());
+        }
+
+        //remove all type = vps
+        System.out.println("\n\n---------- Remove where type equale vps ----------");
+        table.remove(new BasicDBObject().append("type", "vps"));
+        DBCursor curseur_remove = table.find();
+        while (curseur_remove.hasNext()) {
+            System.out.println(curseur_remove.next());
+        }
+
+        db.dropDatabase();
+
+    }
+
+}
